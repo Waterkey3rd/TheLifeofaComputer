@@ -1,0 +1,616 @@
+import React, { useState, useEffect } from 'react';
+import { 
+  Terminal, ShoppingCart, Wrench, Backpack, Wallet, 
+  Moon, Sun, Activity, AlertTriangle, Monitor, 
+  ShieldAlert, Cpu, HardDrive, Clock, X, ChevronRight, 
+  CheckCircle2, AlertCircle, Laptop, Skull, Award, RefreshCw
+} from 'lucide-react';
+
+// --- 枚举与常量 ---
+const GAME_STATES = {
+  BOOTING: 'BOOTING',
+  SELECT_PC: 'SELECT_PC',
+  PLAYING: 'PLAYING',
+  GAME_OVER: 'GAME_OVER'
+};
+
+const COMPUTER_MODELS = [
+  { 
+    id: 'y9000p', 
+    name: "联想拯救者 Y9000P", 
+    desc: "厚重砖头，性能狂兽。电费杀手。", 
+    icon: <Monitor className="w-8 h-8 text-blue-500" />,
+    stats: { hardware: 95, system: 80, software: 70, storage: 90, wealth: 1000 } 
+  },
+  { 
+    id: 'macbook', 
+    name: "MacBook Air M3", 
+    desc: "轻薄优雅。但不兼容学校机房的祖传C语言软件。", 
+    icon: <Laptop className="w-8 h-8 text-gray-400" />,
+    stats: { hardware: 90, system: 100, software: 30, storage: 60, wealth: 800 } 
+  },
+  { 
+    id: 'magicbook', 
+    name: "荣耀 MagicBook", 
+    desc: "极致性价比。室友都在用。", 
+    icon: <Laptop className="w-8 h-8 text-indigo-400" />,
+    stats: { hardware: 70, system: 70, software: 80, storage: 80, wealth: 1500 } 
+  }
+];
+
+const SHOP_ITEMS = [
+  { id: 'item1', name: "RGB散热支架", price: 80, desc: "每日硬件损耗减半", icon: <Cpu className="w-6 h-6 text-blue-400" /> },
+  { id: 'item2', name: "杂牌移动硬盘", price: 150, desc: "抵消一次数据丢失危机", icon: <HardDrive className="w-6 h-6 text-gray-500" /> },
+  { id: 'item3', name: "正版火绒激活码", price: 0, desc: "免疫80%流氓软件", icon: <ShieldAlert className="w-6 h-6 text-orange-500" /> },
+];
+
+const SERVICES = [
+  { id: 'srv1', name: "网协电脑诊所", desc: "学校里用爱发电的硬核计算机学生组织。免费义诊！", price: "免费", type: "official" },
+  { id: 'srv2', name: "学服某品牌授权店", desc: "速度快，收费极高，大概率诱导你重装系统并收费。", price: "¥200起", type: "danger" },
+  { id: 'srv3', name: "公主坟极客维修", desc: "距离远，价格贵，但技术是顶级的。", price: "¥500起", type: "neutral" },
+];
+
+// --- 模拟事件库 ---
+const DAILY_EVENTS = [
+  {
+    day: 1,
+    title: "初入校园的诱惑",
+    type: "routine",
+    description: "新生群里有人发了一个名为“校园网免费免认证加速器.exe”的文件，大家都在下载。",
+    technical_context: "来历不明的提权软件极有可能是木马，用来挖矿或盗取账号。",
+    options: [
+      { text: "立刻下载并以管理员身份运行", type: 'danger', effects: { software: -50, system: -30, cyberSense: -10 } },
+      { text: "无视，老老实实用官方校园网", type: 'neutral', effects: { cyberSense: 10 } }
+    ]
+  },
+  {
+    day: 2,
+    title: "一杯水的惨案",
+    type: "crisis",
+    description: "室友打游戏激动砸桌子，把半杯水震翻了，水洒向了你的键盘边缘...",
+    technical_context: "电子元件遇水短路会导致主板烧毁，必须立刻断电。",
+    options: [
+      { text: "抽纸巾慢慢擦（机器还在运行）", type: 'danger', effects: { hardware: -80, mental: -50 } },
+      { text: "长按电源键强制关机，倒扣电脑", type: 'safe', effects: { hardware: -10, cyberSense: 20 } }
+    ]
+  },
+  {
+    day: 3,
+    title: "莫名其妙的卡顿",
+    type: "routine",
+    description: "今天打开电脑，发现桌面上多了一个“贪玩蓝月”和“2345安全卫士”，电脑风扇狂转。",
+    technical_context: "流氓软件通常捆绑安装，极度消耗系统资源。",
+    options: [
+      { text: "花钱去学服授权店解决", type: 'danger', effects: { wealth: -300, system: 20, mental: -20 } },
+      { text: "带上电脑去宿舍楼下的【网协义诊摊位】", type: 'safe', effects: { system: 40, software: 40, cyberSense: 30 } }
+    ]
+  }
+];
+
+// --- 组件 ---
+
+export default function App() {
+  const [gameState, setGameState] = useState(GAME_STATES.BOOTING);
+  const [isDark, setIsDark] = useState(true);
+  
+  // 玩家状态
+  const [stats, setStats] = useState(null);
+  
+  // UI 状态
+  const [activeApp, setActiveApp] = useState(null);
+  const [currentEvent, setCurrentEvent] = useState(null);
+  const [gameOverData, setGameOverData] = useState(null);
+
+  // 初始化或重新开始
+  const restartGame = () => {
+    setStats(null);
+    setGameOverData(null);
+    setCurrentEvent(null);
+    setActiveApp(null);
+    setGameState(GAME_STATES.SELECT_PC);
+  };
+
+  // 选择电脑后初始化数值
+  const initPlayerStats = (model) => {
+    setStats({
+      modelId: model.id,
+      modelName: model.name,
+      hardware: model.stats.hardware,
+      system: model.stats.system,
+      software: model.stats.software,
+      storage: model.stats.storage,
+      wealth: model.stats.wealth,
+      mental: 80,
+      cyberSense: 10,
+      day: 1,
+      time: "清晨"
+    });
+    setGameState(GAME_STATES.PLAYING);
+    // 触发第一天的事件
+    triggerEventForDay(1);
+  };
+
+  // 根据天数触发事件
+  const triggerEventForDay = (day) => {
+    const event = DAILY_EVENTS.find(e => e.day === day);
+    if (event) {
+      setCurrentEvent(event);
+    } else {
+      setCurrentEvent(null);
+    }
+  };
+
+  // 结算状态并检测结局
+  const applyEffectsAndCheckState = (effects) => {
+    setStats(prev => {
+      const newStats = { ...prev };
+      // 应用变化
+      for (const [key, value] of Object.entries(effects)) {
+        newStats[key] = Math.max(0, Math.min(key === 'wealth' ? 9999 : 100, (newStats[key] || 0) + value));
+      }
+      
+      // 检测坏结局 (任意一项健康度归零)
+      if (newStats.hardware === 0) {
+        triggerGameOver("主板冒烟", "硬件完全损坏，面对高昂的维修费，你选择了宕机退学。", "bad");
+        return newStats;
+      }
+      if (newStats.system === 0 || newStats.software === 0) {
+        triggerGameOver("赛博肉鸡", "电脑中满了木马勒索病毒，你的全盘数据被锁定，由于未备份作业，你挂科了。", "bad");
+        return newStats;
+      }
+      if (newStats.wealth === 0) {
+        triggerGameOver("钱包破产", "被黑心维修店坑光了最后的生活费，这下连泡面都吃不起了。", "bad");
+        return newStats;
+      }
+
+      return newStats;
+    });
+  };
+
+  // 处理选项点击
+  const handleOptionClick = (option) => {
+    if (option.effects) {
+      applyEffectsAndCheckState(option.effects);
+    }
+    setCurrentEvent(null);
+  };
+
+  // 推进天数
+  const nextDay = () => {
+    if (gameState !== GAME_STATES.PLAYING) return;
+
+    if (stats.day >= 7) {
+      // 存活 7 天触发好结局
+      triggerGameOver("挺过军训季", "你成功保护了自己的电脑，甚至还加深了对软硬件的了解。接下来，可以考虑加入【网络开拓者协会】了！", "good");
+      return;
+    }
+
+    const nextD = stats.day + 1;
+    setStats(prev => ({ ...prev, day: nextD }));
+    triggerEventForDay(nextD);
+  };
+
+  // 触发结局
+  const triggerGameOver = (title, desc, type) => {
+    setGameOverData({ title, desc, type });
+    setGameState(GAME_STATES.GAME_OVER);
+  };
+
+  const toggleTheme = () => setIsDark(!isDark);
+  const getHealthColor = (value) => value > 60 ? "bg-green-500" : value > 30 ? "bg-yellow-500" : "bg-red-500 animate-pulse";
+
+  // --- 渲染分支 ---
+
+  if (gameState === GAME_STATES.BOOTING) {
+    return <BootScreen onComplete={() => setGameState(GAME_STATES.SELECT_PC)} />;
+  }
+
+  if (gameState === GAME_STATES.SELECT_PC) {
+    return <SelectPCScreen onSelect={initPlayerStats} isDark={isDark} />;
+  }
+
+  if (gameState === GAME_STATES.GAME_OVER) {
+    return <GameOverScreen data={gameOverData} onRestart={restartGame} isDark={isDark} />;
+  }
+
+  // --- 主游戏循环界面 (PLAYING) ---
+  return (
+    <div className={`${isDark ? 'dark' : ''} w-full h-[100dvh] overflow-hidden`}>
+      <div className="relative w-full h-full bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-200 font-sans transition-colors duration-300 flex flex-col md:flex-row overflow-hidden bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]">
+        
+        {/* 左侧监控栏 / 手机端顶部栏 */}
+        <aside className="w-full md:w-72 bg-white/70 dark:bg-black/50 backdrop-blur-xl border-b md:border-b-0 md:border-r border-slate-200 dark:border-white/10 flex flex-col z-20 shrink-0 shadow-md">
+          <div className="p-3 md:p-4 border-b border-slate-200 dark:border-white/10 flex justify-between items-center shrink-0">
+            <div className="flex items-center gap-2 font-bold text-base md:text-lg tracking-wider">
+              <Activity className="w-4 h-4 md:w-5 md:h-5 text-blue-500" />
+              性能监控
+            </div>
+            <div className="flex items-center gap-3 text-xs md:hidden bg-slate-200 dark:bg-slate-800 px-2 py-1 rounded-full font-mono font-bold text-blue-500">
+              军训 Day {stats?.day}/7
+            </div>
+            <button onClick={toggleTheme} className="p-1.5 md:p-2 rounded-full hover:bg-slate-200 dark:hover:bg-white/10 transition">
+              {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </button>
+          </div>
+
+          <div className="p-3 md:p-4 flex-1 overflow-y-auto overflow-x-auto flex flex-row md:flex-col gap-3 md:gap-6 md:custom-scrollbar">
+            <div className="hidden md:flex flex-col justify-between items-start mb-2">
+              <div className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1">当前设备</div>
+              <div className="font-mono text-sm md:text-base font-semibold text-blue-600 dark:text-blue-400">{stats?.modelName}</div>
+              <div className="mt-2 text-xs bg-slate-200 dark:bg-slate-800 px-3 py-1 rounded-full font-mono font-bold">
+                军训进度: Day {stats?.day} / 7
+              </div>
+            </div>
+
+            <div className="flex md:grid md:grid-cols-2 gap-2 md:gap-4 shrink-0">
+              <div className="min-w-[120px] bg-blue-50 dark:bg-blue-900/20 p-2 md:p-3 rounded-lg border border-blue-100 dark:border-blue-800/50 transition-all">
+                <div className="flex items-center gap-1 text-[10px] md:text-xs text-blue-600 dark:text-blue-400 mb-1">
+                  <Wallet className="w-3 h-3" /> 校园钱包
+                </div>
+                <div className="text-sm md:text-lg font-bold text-blue-700 dark:text-blue-300">¥{stats?.wealth}</div>
+              </div>
+              <div className="min-w-[120px] bg-purple-50 dark:bg-purple-900/20 p-2 md:p-3 rounded-lg border border-purple-100 dark:border-purple-800/50 transition-all">
+                <div className="flex items-center gap-1 text-[10px] md:text-xs text-purple-600 dark:text-purple-400 mb-1">
+                  <Terminal className="w-3 h-3" /> 赛博常识
+                </div>
+                <div className="text-sm md:text-lg font-bold text-purple-700 dark:text-purple-300">{stats?.cyberSense} pt</div>
+              </div>
+            </div>
+
+            <div className="flex md:flex-col gap-4 md:gap-0 shrink-0">
+              <div className="hidden md:flex text-xs text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2 items-center justify-between">
+                <span>设备健康度</span>
+              </div>
+              
+              <div className="flex md:flex-col gap-3 md:gap-4">
+                {[
+                  { label: "硬件", val: stats?.hardware, icon: <Cpu className="w-3 h-3 md:w-4 md:h-4" /> },
+                  { label: "系统", val: stats?.system, icon: <Monitor className="w-3 h-3 md:w-4 md:h-4" /> },
+                  { label: "软件", val: stats?.software, icon: <ShieldAlert className="w-3 h-3 md:w-4 md:h-4" /> },
+                  { label: "存储", val: stats?.storage, icon: <HardDrive className="w-3 h-3 md:w-4 md:h-4" /> },
+                ].map((item, idx) => (
+                  <div key={idx} className="space-y-1 min-w-[100px] md:min-w-0">
+                    <div className="flex justify-between text-[10px] md:text-xs font-medium">
+                      <span className="flex items-center gap-1 text-slate-600 dark:text-slate-300">
+                        {item.icon} {item.label}
+                      </span>
+                      <span className={item.val < 50 ? "text-red-500" : ""}>{item.val}%</span>
+                    </div>
+                    <div className="w-full bg-slate-200 dark:bg-slate-700 h-1.5 md:h-2 rounded-full overflow-hidden">
+                      <div className={`h-full ${getHealthColor(item.val)} transition-all duration-300`} style={{ width: `${item.val}%` }}></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </aside>
+
+        {/* 桌面核心区 */}
+        <main className="flex-1 relative p-4 pb-28 md:pb-8 flex items-center justify-center overflow-hidden">
+          
+          {/* 未触发事件时显示的空闲提示 */}
+          {!currentEvent && !activeApp && (
+            <div className="text-center opacity-50 flex flex-col items-center select-none animate-in fade-in zoom-in duration-500">
+              <Terminal className="w-16 h-16 mb-4 text-slate-400" />
+              <p className="font-mono text-lg tracking-widest text-slate-500 dark:text-slate-400">桌面空闲</p>
+              <p className="text-xs mt-2 text-slate-400 dark:text-slate-500">可以逛逛商店，或者点击下方时钟结束今天</p>
+            </div>
+          )}
+
+          {/* 突发事件弹窗 */}
+          {currentEvent && (
+            <div className="relative w-full max-w-lg max-h-full bg-white/95 dark:bg-slate-800/95 backdrop-blur-2xl shadow-2xl rounded-xl border border-slate-200 dark:border-slate-700 flex flex-col animate-in zoom-in-95 slide-in-from-top-4 duration-300 z-10">
+              <div className="bg-slate-100 dark:bg-slate-900 px-3 py-2 md:px-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between select-none shrink-0 rounded-t-xl">
+                <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300 truncate">
+                  <AlertTriangle className={`w-4 h-4 shrink-0 ${currentEvent.type === 'crisis' ? 'text-red-500 animate-pulse' : 'text-yellow-500'}`} />
+                  <span className="truncate">{currentEvent.title}</span>
+                </div>
+              </div>
+
+              <div className="p-4 md:p-6 overflow-y-auto">
+                <p className="text-sm md:text-base text-slate-800 dark:text-slate-100 mb-4 leading-relaxed font-medium">
+                  {currentEvent.description}
+                </p>
+                <div className="bg-slate-100 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 p-2 md:p-3 rounded-lg mb-6">
+                  <p className="text-xs text-slate-600 dark:text-slate-400 font-mono leading-relaxed flex items-start gap-2">
+                    <Terminal className="w-3 h-3 shrink-0 mt-0.5"/> 
+                    系统分析：{currentEvent.technical_context}
+                  </p>
+                </div>
+
+                <div className="space-y-2 md:space-y-3">
+                  {currentEvent.type === 'crisis' && (
+                     <div className="w-full h-1 bg-slate-200 dark:bg-slate-700 rounded-full mb-2 overflow-hidden">
+                       <div className="h-full bg-red-500 animate-[shrink_10s_linear_forwards]" style={{ width: '100%' }}></div>
+                     </div>
+                  )}
+                  {currentEvent.options.map((opt, i) => (
+                    <button 
+                      key={i}
+                      className={`w-full text-left p-3 rounded-lg border transition-all flex items-center justify-between group active:scale-[0.98]
+                        ${opt.type === 'danger' ? 'bg-red-50/50 dark:bg-red-900/10 hover:bg-red-100 dark:hover:bg-red-900/30 border-red-200 dark:border-red-800 text-red-900 dark:text-red-200' : ''}
+                        ${opt.type === 'safe' ? 'bg-green-50/50 dark:bg-green-900/10 border-green-200 dark:border-green-800 hover:bg-green-100 dark:hover:bg-green-900/40 text-green-900 dark:text-green-200' : ''}
+                        ${opt.type === 'neutral' ? 'hover:bg-slate-50 dark:hover:bg-slate-700 border-slate-200 dark:border-slate-700' : ''}
+                      `}
+                      onClick={() => handleOptionClick(opt)}
+                    >
+                      <span className="text-xs md:text-sm font-medium pr-2">{opt.text}</span>
+                      <ChevronRight className="w-4 h-4 opacity-50 group-hover:opacity-100 transition-opacity shrink-0" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* 商店面板 */}
+          {activeApp === 'shop' && (
+             <AppWindow title="二手东外设商店" icon={<ShoppingCart className="w-4 h-4 text-blue-500"/>} onClose={() => setActiveApp(null)}>
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+                  {SHOP_ITEMS.map(item => (
+                    <div key={item.id} className="p-3 md:p-4 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 hover:shadow-md transition">
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="p-2 bg-slate-100 dark:bg-slate-700 rounded-lg shrink-0">{item.icon}</div>
+                        <div>
+                          <h4 className="font-bold text-sm">{item.name}</h4>
+                          <p className="text-[10px] md:text-xs text-slate-500 dark:text-slate-400">{item.desc}</p>
+                        </div>
+                      </div>
+                      <div className="flex justify-between items-center mt-3 md:mt-4">
+                        <span className="font-mono font-bold text-blue-600 dark:text-blue-400 text-sm md:text-base">{item.price === 0 ? '免费' : `¥${item.price}`}</span>
+                        <button className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-md transition active:scale-95"
+                          onClick={() => {
+                            if (stats.wealth >= item.price) {
+                              applyEffectsAndCheckState({ wealth: -item.price });
+                              alert("购买成功！(Demo暂未实现背包装备逻辑)");
+                            } else {
+                              alert("余额不足");
+                            }
+                          }}
+                        >购买</button>
+                      </div>
+                    </div>
+                  ))}
+               </div>
+             </AppWindow>
+          )}
+
+          {/* 维修服务面板 */}
+          {activeApp === 'services' && (
+             <AppWindow title="校园维修服务预约" icon={<Wrench className="w-4 h-4 text-orange-500"/>} onClose={() => setActiveApp(null)}>
+               <div className="space-y-3">
+                  {SERVICES.map(srv => (
+                    <div key={srv.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 md:p-4 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 hover:border-blue-400 transition gap-2 md:gap-4">
+                      <div>
+                        <h4 className="font-bold text-sm flex items-center gap-2">
+                          {srv.name}
+                          {srv.type === 'official' && <CheckCircle2 className="w-3 h-3 md:w-4 md:h-4 text-green-500" />}
+                          {srv.type === 'danger' && <AlertCircle className="w-3 h-3 md:w-4 md:h-4 text-red-500" />}
+                        </h4>
+                        <p className="text-[10px] md:text-xs text-slate-500 dark:text-slate-400 mt-1 leading-snug">{srv.desc}</p>
+                      </div>
+                      <div className="flex items-center justify-between w-full sm:w-auto mt-2 sm:mt-0">
+                        <span className="font-mono font-bold text-slate-700 dark:text-slate-300 text-sm mr-4">{srv.price}</span>
+                        <button className="px-4 py-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-xs font-semibold rounded-lg hover:opacity-90 transition active:scale-95"
+                           onClick={() => {
+                             if(srv.type === 'official') {
+                               applyEffectsAndCheckState({ hardware: 20, system: 20, software: 20 });
+                               alert("网协的大佬帮你免费清理了流氓软件并排除了硬件隐患！健康度回升。");
+                             } else {
+                               alert("Demo暂未实装其他店铺逻辑。");
+                             }
+                           }}
+                        >求助</button>
+                      </div>
+                    </div>
+                  ))}
+               </div>
+               <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300 text-xs rounded-lg border border-blue-200 dark:border-blue-800 flex gap-2">
+                 <Terminal className="w-4 h-4 shrink-0" />
+                 <span>提示：电脑出现问题时，优先向【网协】求助不仅免费，还能学习到正统的赛博常识，避免被外面的维修刺客宰客。</span>
+               </div>
+             </AppWindow>
+          )}
+
+        </main>
+
+        {/* 底部应用 Dock */}
+        <div className="absolute bottom-4 left-4 right-4 md:left-1/2 md:right-auto md:-translate-x-1/2 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-2xl rounded-2xl p-2 flex justify-around md:justify-center items-center gap-1 md:gap-2 z-30">
+          <DockIcon icon={<ShoppingCart />} label="外设商店" onClick={() => { setActiveApp(activeApp === 'shop' ? null : 'shop'); setCurrentEvent(null); }} isActive={activeApp === 'shop'} />
+          <DockIcon icon={<Wrench />} label="校园服务" onClick={() => { setActiveApp(activeApp === 'services' ? null : 'services'); setCurrentEvent(null); }} isActive={activeApp === 'services'} />
+          <div className="hidden md:block w-px h-8 bg-slate-300 dark:bg-slate-600 mx-1"></div>
+          <DockIcon icon={<Backpack />} label="我的背包" onClick={() => {}} />
+          <DockIcon icon={<Clock />} label="结束今天" 
+            onClick={nextDay} 
+            className="text-blue-500 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800" 
+            pulsing={!currentEvent}
+          />
+        </div>
+      </div>
+      <style dangerouslySetInnerHTML={{__html: `
+        @keyframes shrink { from { width: 100%; } to { width: 0%; } }
+      `}} />
+    </div>
+  );
+}
+
+// --- 子组件: 开机动画 ---
+const BootScreen = ({ onComplete }) => {
+  const [logs, setLogs] = useState([]);
+  
+  useEffect(() => {
+    const bootLogs = [
+      "NPA BIOS Initializing...",
+      "Checking RAM... OK",
+      "Mounting File Systems... OK",
+      "Loading Cyber Campus Survival OS...",
+      "Welcome to Network Pioneers Association."
+    ];
+    let currentLog = 0;
+    const interval = setInterval(() => {
+      setLogs(prev => [...prev, bootLogs[currentLog]]);
+      currentLog++;
+      if (currentLog === bootLogs.length) {
+        clearInterval(interval);
+        setTimeout(onComplete, 1200);
+      }
+    }, 300);
+    return () => clearInterval(interval);
+  }, [onComplete]);
+
+  return (
+    <div className="fixed inset-0 bg-black text-green-500 font-mono p-4 z-50 flex flex-col justify-center items-center overflow-hidden">
+      <div className="w-full max-w-2xl">
+        <div className="text-3xl md:text-5xl font-bold text-center mb-8 animate-pulse text-green-400">
+          N.P.A. OS v1.0
+        </div>
+        <div className="space-y-2 text-sm md:text-base">
+          {logs.map((log, i) => (
+            <div key={i} className="animate-in fade-in slide-in-from-bottom-2 break-words">
+              {'> '} {log}
+            </div>
+          ))}
+          {logs.length < 5 && <div className="animate-pulse">{'> _'}</div>}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// --- 子组件: 选择电脑界面 ---
+const SelectPCScreen = ({ onSelect, isDark }) => {
+  const [selected, setSelected] = useState(null);
+
+  return (
+    <div className={`${isDark ? 'dark' : ''} fixed inset-0 bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-200 z-50 flex flex-col`}>
+      <div className="flex-1 overflow-y-auto p-4 md:p-8 flex flex-col items-center justify-center">
+        <div className="text-center mb-8 md:mb-12 animate-in fade-in slide-in-from-top-8">
+          <h1 className="text-2xl md:text-4xl font-bold mb-2 font-mono">STEP 1: 选择你的战机</h1>
+          <p className="text-slate-500 dark:text-slate-400 text-sm md:text-base">作为一名准大学生，你需要一台设备来度过漫长的四年。</p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-8 w-full max-w-5xl">
+          {COMPUTER_MODELS.map((model) => (
+            <button
+              key={model.id}
+              onClick={() => setSelected(model.id)}
+              className={`relative p-6 rounded-2xl border-2 text-left transition-all duration-300 flex flex-col h-full
+                ${selected === model.id 
+                  ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-500 shadow-xl shadow-blue-500/20 scale-[1.02]' 
+                  : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-blue-300 dark:hover:border-slate-500'}
+              `}
+            >
+              <div className="mb-4 p-3 bg-slate-100 dark:bg-slate-700/50 rounded-xl inline-block">
+                {model.icon}
+              </div>
+              <h2 className="text-lg md:text-xl font-bold mb-2">{model.name}</h2>
+              <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400 mb-6 flex-1">{model.desc}</p>
+              
+              <div className="space-y-2 w-full mt-auto">
+                <div className="flex justify-between text-xs font-mono">
+                  <span>初始余额</span>
+                  <span className="font-bold text-blue-500">¥{model.stats.wealth}</span>
+                </div>
+                <div className="flex justify-between text-xs font-mono">
+                  <span>硬件耐久</span>
+                  <span className="font-bold text-slate-700 dark:text-slate-300">{model.stats.hardware}</span>
+                </div>
+                <div className="flex justify-between text-xs font-mono">
+                  <span>系统纯净度</span>
+                  <span className="font-bold text-slate-700 dark:text-slate-300">{model.stats.system}</span>
+                </div>
+              </div>
+              
+              {selected === model.id && (
+                <div className="absolute top-4 right-4 text-blue-500 animate-in zoom-in">
+                  <CheckCircle2 className="w-6 h-6" />
+                </div>
+              )}
+            </button>
+          ))}
+        </div>
+
+        <div className="mt-8 md:mt-12 h-16">
+          {selected && (
+             <button 
+                onClick={() => onSelect(COMPUTER_MODELS.find(m => m.id === selected))}
+                className="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-full shadow-lg shadow-blue-500/30 flex items-center gap-2 animate-in slide-in-from-bottom-4 active:scale-95 transition-all"
+             >
+               提取设备，开始生存 <ChevronRight className="w-5 h-5" />
+             </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// --- 子组件: 结局界面 ---
+const GameOverScreen = ({ data, onRestart, isDark }) => {
+  const isGood = data.type === 'good';
+  
+  return (
+    <div className={`${isDark ? 'dark' : ''} fixed inset-0 z-50 flex items-center justify-center p-4 
+      ${isGood ? 'bg-green-900/90' : 'bg-[#0000AA]'} /* 坏结局致敬 Windows 经典蓝屏 */
+    `}>
+      <div className={`max-w-md w-full p-8 rounded-2xl shadow-2xl flex flex-col items-center text-center animate-in zoom-in-95 duration-500
+        ${isGood ? 'bg-white/10 backdrop-blur-md text-white border border-white/20' : 'bg-transparent text-white'}
+      `}>
+        {isGood ? <Award className="w-20 h-20 mb-6 text-yellow-400" /> : <Skull className="w-20 h-20 mb-6 opacity-80" />}
+        
+        <h1 className="text-3xl font-bold mb-4 font-mono tracking-wider">{data.title}</h1>
+        <p className={`text-base leading-relaxed mb-8 ${isGood ? 'text-green-50' : 'text-blue-100 font-mono'}`}>
+          {data.desc}
+        </p>
+
+        <button 
+          onClick={onRestart}
+          className={`px-6 py-3 rounded-xl font-bold flex items-center gap-2 transition-transform active:scale-95
+            ${isGood ? 'bg-white text-green-900 hover:bg-green-50' : 'bg-white/20 hover:bg-white/30 text-white border border-white/30 font-mono'}
+          `}
+        >
+          <RefreshCw className="w-4 h-4" /> 重新开始模拟
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// --- 子组件: 窗口容器 ---
+const AppWindow = ({ title, icon, onClose, children }) => (
+  <div className="absolute top-4 left-4 right-4 bottom-24 md:inset-auto md:w-[600px] md:h-auto md:max-h-[80vh] bg-slate-50 dark:bg-slate-900 shadow-2xl rounded-xl border border-slate-200 dark:border-slate-700 flex flex-col overflow-hidden animate-in slide-in-from-bottom-8 duration-300 z-20">
+    <div className="bg-slate-200/50 dark:bg-slate-800 px-3 py-2.5 md:px-4 md:py-3 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between backdrop-blur-md shrink-0">
+      <div className="flex items-center gap-2 font-semibold text-sm md:text-base text-slate-700 dark:text-slate-300">
+        {icon}
+        {title}
+      </div>
+      <button onClick={onClose} className="p-1 hover:bg-slate-300 dark:hover:bg-slate-700 rounded-md transition">
+        <X className="w-4 h-4 md:w-5 md:h-5" />
+      </button>
+    </div>
+    <div className="p-3 md:p-6 overflow-y-auto flex-1 md:custom-scrollbar">
+      {children}
+    </div>
+  </div>
+);
+
+// --- 子组件: Dock 图标 ---
+const DockIcon = ({ icon, label, onClick, isActive, className = "", pulsing = false }) => (
+  <div className="group relative flex flex-col items-center">
+    <button 
+      onClick={onClick}
+      className={`p-3 rounded-xl transition-all duration-200 active:scale-95
+        ${isActive ? 'bg-slate-200 dark:bg-slate-700 shadow-inner' : 'hover:bg-slate-100 dark:hover:bg-slate-700/50 hover:-translate-y-1 md:hover:shadow-lg'}
+        ${pulsing ? 'animate-[pulse_2s_ease-in-out_infinite]' : ''}
+        ${className} text-slate-700 dark:text-slate-300
+      `}
+    >
+      {React.cloneElement(icon, { className: "w-5 h-5 md:w-7 md:h-7" })}
+    </button>
+    <div className="hidden md:block absolute -top-10 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-800 text-white text-xs px-2 py-1 rounded shadow-lg pointer-events-none whitespace-nowrap">
+      {label}
+    </div>
+    {isActive && <div className="absolute -bottom-1 w-1 h-1 bg-slate-500 rounded-full"></div>}
+  </div>
+);
