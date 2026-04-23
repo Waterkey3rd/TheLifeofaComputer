@@ -24,8 +24,8 @@ export interface EventSchema {
   timeout_option_id?: string;
 }
 
-export default function DesktopView() {
-  const { health_status, attributes, computer, day, nextDay, setPlayerState } = usePlayerStore();
+export default function DesktopView({ onShutdown }: { onShutdown?: () => void }) {
+  const { health_status, attributes, computer, day, hidden_flags, nextDay, setPlayerState } = usePlayerStore();
   const [activeApp, setActiveApp] = useState<string | null>(null);
   const [isDark, setIsDark] = useState(true);
   const [showHardware, setShowHardware] = useState(false);
@@ -34,6 +34,7 @@ export default function DesktopView() {
   const [isEventLoading, setIsEventLoading] = useState(false);
   const [eventResult, setEventResult] = useState<string | null>(null);
   const [timeoutRemaining, setTimeoutRemaining] = useState<number | null>(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const fetchDailyEvent = async () => {
     setIsEventLoading(true);
@@ -41,11 +42,15 @@ export default function DesktopView() {
     setTimeoutRemaining(null);
     try {
       const state = usePlayerStore.getState();
-      const res = await fetch('http://127.0.0.1:8000/api/event/next', {
+      const baseUrl = `http://${window.location.hostname}:8000`;
+      const res = await fetch(`${baseUrl}/api/event/next`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ state, event_type: 'routine' })
       });
+      if (!res.ok) {
+        throw new Error(`后端返回错误 HTTP ${res.status}: ${await res.text()}`);
+      }
       const data = await res.json();
       if (data.event) {
         setCurrentEvent(data.event);
@@ -56,8 +61,9 @@ export default function DesktopView() {
       if (data.state) {
         setPlayerState(data.state);
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error("Fetch event error:", e);
+      setEventResult(`网络连接失败！请确保后端已执行: uvicorn main:app --host 0.0.0.0 --port 8000\n\n详细错误: ${e.message}`);
     } finally {
       setIsEventLoading(false);
     }
@@ -90,11 +96,15 @@ export default function DesktopView() {
     setTimeoutRemaining(null);
     try {
       const state = usePlayerStore.getState();
-      const res = await fetch('http://127.0.0.1:8000/api/action/resolve', {
+      const baseUrl = `http://${window.location.hostname}:8000`;
+      const res = await fetch(`${baseUrl}/api/action/resolve`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ state, event: currentEvent, option_id })
       });
+      if (!res.ok) {
+        throw new Error(`后端返回错误 HTTP ${res.status}: ${await res.text()}`);
+      }
       const data = await res.json();
       if (data.state) {
         setPlayerState(data.state);
@@ -131,19 +141,44 @@ export default function DesktopView() {
   ];
 
   return (
-    <div className="w-full h-full bg-zinc-200 dark:bg-[url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2564&auto=format&fit=crop')] bg-cover bg-center relative flex overflow-hidden text-zinc-900 dark:text-zinc-100 transition-colors">
+    <div className="w-full h-full bg-zinc-200 dark:bg-[url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2564&auto=format&fit=crop')] bg-cover bg-center relative flex flex-col md:flex-row overflow-hidden text-zinc-900 dark:text-zinc-100 transition-colors">
       <div className="absolute inset-0 bg-white/40 dark:bg-black/60 backdrop-blur-[2px] z-0 transition-colors"></div>
 
       {/* Sidebar */}
-      <div className="w-64 bg-white/60 dark:bg-zinc-950/80 backdrop-blur-xl border-r border-zinc-200 dark:border-white/10 z-10 p-6 flex flex-col h-full shrink-0 shadow-lg">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-bold dark:text-white/90">系统监控</h2>
-          <button 
-            onClick={() => setIsDark(!isDark)}
-            className="p-2 rounded-full hover:bg-zinc-200 dark:hover:bg-white/10 transition-colors"
-          >
-            {isDark ? <Sun size={20} className="text-amber-400" /> : <Moon size={20} className="text-indigo-500" />}
-          </button>
+      <div className={clsx("w-full md:w-64 bg-white/80 dark:bg-zinc-950/90 backdrop-blur-xl border-b md:border-r border-zinc-200 dark:border-white/10 z-10 p-4 md:p-6 flex flex-col shrink-0 shadow-lg transition-all duration-300", isSidebarOpen ? "h-[50vh] md:h-full overflow-y-auto" : "h-16 md:h-full overflow-hidden")}>
+        <div className="flex justify-between items-center mb-6 cursor-pointer md:cursor-auto" onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
+          <div className="flex items-center gap-2">
+            <h2 className="text-xl font-bold dark:text-white/90">系统监控</h2>
+            <span className="md:hidden text-xs text-indigo-500 bg-indigo-500/10 px-2 py-1 rounded-full">{isSidebarOpen ? "收起" : "展开"}</span>
+          </div>
+          <div className="flex items-center gap-1">
+            {hidden_flags?.is_endless_mode && onShutdown && (
+              <button 
+                title="长按关机回到菜单"
+                onPointerDown={(e) => {
+                  e.stopPropagation();
+                  (window as any).shutdownTimer = setTimeout(() => onShutdown(), 1000);
+                }}
+                onPointerUp={(e) => {
+                  e.stopPropagation();
+                  clearTimeout((window as any).shutdownTimer);
+                }}
+                onPointerLeave={(e) => {
+                  e.stopPropagation();
+                  clearTimeout((window as any).shutdownTimer);
+                }}
+                className="p-2 rounded-full hover:bg-red-500/20 text-red-500 transition-colors"
+              >
+                <Power size={20} />
+              </button>
+            )}
+            <button 
+              onClick={(e) => { e.stopPropagation(); setIsDark(!isDark); }}
+              className="p-2 rounded-full hover:bg-zinc-200 dark:hover:bg-white/10 transition-colors"
+            >
+              {isDark ? <Sun size={20} className="text-amber-400" /> : <Moon size={20} className="text-indigo-500" />}
+            </button>
+          </div>
         </div>
         
         <div className="space-y-6">
@@ -172,9 +207,11 @@ export default function DesktopView() {
               {stat.label === '硬件' && showHardware && (
                 <div className="mt-2 grid grid-cols-2 gap-1 text-[10px] text-zinc-500 bg-zinc-100 dark:bg-zinc-900 p-2 rounded-lg">
                   <div className="flex justify-between"><span>CPU</span><span className={health_status.hardware_details.cpu < 50 ? "text-red-500" : ""}>{health_status.hardware_details.cpu}%</span></div>
-                  <div className="flex justify-between"><span>主板</span><span className={health_status.hardware_details.motherboard < 50 ? "text-red-500" : ""}>{health_status.hardware_details.motherboard}%</span></div>
                   <div className="flex justify-between"><span>内存</span><span className={health_status.hardware_details.ram < 50 ? "text-red-500" : ""}>{health_status.hardware_details.ram}%</span></div>
+                  <div className="flex justify-between"><span>硬盘</span><span className={health_status.hardware_details.disk < 50 ? "text-red-500" : ""}>{health_status.hardware_details.disk}%</span></div>
                   <div className="flex justify-between"><span>屏幕</span><span className={health_status.hardware_details.screen < 50 ? "text-red-500" : ""}>{health_status.hardware_details.screen}%</span></div>
+                  <div className="flex justify-between"><span>风扇</span><span className={health_status.hardware_details.fan < 50 ? "text-red-500" : ""}>{health_status.hardware_details.fan}%</span></div>
+                  <div className="flex justify-between"><span>外壳</span><span className={health_status.hardware_details.shell < 50 ? "text-red-500" : ""}>{health_status.hardware_details.shell}%</span></div>
                 </div>
               )}
             </div>
@@ -206,7 +243,7 @@ export default function DesktopView() {
       </div>
 
       {/* Main Area */}
-      <div className="flex-1 relative z-10 flex items-center justify-center p-8">
+      <div className="flex-1 relative z-10 flex items-center justify-center p-4 md:p-8 overflow-y-auto pb-32 md:pb-8">
         {!activeApp ? (
           <div className="bg-white/90 dark:bg-zinc-900/80 backdrop-blur-md p-6 rounded-2xl border border-zinc-200 dark:border-white/10 max-w-lg w-full shadow-2xl animate-in fade-in zoom-in duration-300 transition-colors">
             {isEventLoading ? (
@@ -306,8 +343,8 @@ export default function DesktopView() {
             )}
           </div>
         ) : (
-          <div className="bg-white/95 dark:bg-zinc-900/90 backdrop-blur-xl w-full max-w-2xl h-[600px] rounded-2xl border border-zinc-200 dark:border-white/10 flex flex-col overflow-hidden shadow-2xl animate-in slide-in-from-bottom-8 transition-colors">
-            <div className="h-12 border-b border-zinc-200 dark:border-white/10 flex items-center justify-between px-4 bg-zinc-100 dark:bg-white/5 transition-colors">
+          <div className="bg-white/95 dark:bg-zinc-900/90 backdrop-blur-xl w-full max-w-2xl h-full md:h-[600px] absolute md:relative inset-0 md:inset-auto z-50 md:z-auto md:rounded-2xl border-none md:border border-zinc-200 dark:border-white/10 flex flex-col overflow-hidden shadow-2xl animate-in slide-in-from-bottom-8 transition-colors">
+            <div className="h-12 border-b border-zinc-200 dark:border-white/10 flex items-center justify-between px-4 bg-zinc-100 dark:bg-white/5 transition-colors pt-safe">
               <span className="font-medium text-sm text-zinc-700 dark:text-zinc-300">
                 {apps.find(a => a.id === activeApp)?.name}
               </span>
@@ -330,18 +367,18 @@ export default function DesktopView() {
       </div>
 
       {/* Dock */}
-      <div className="absolute bottom-6 left-64 right-0 flex justify-center z-20 pb-safe pointer-events-none">
-        <div className="bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border border-zinc-200 dark:border-white/10 p-3 rounded-3xl flex gap-4 pointer-events-auto shadow-2xl transition-colors">
+      <div className="absolute bottom-4 md:bottom-6 left-0 md:left-64 right-0 flex justify-center z-40 pb-safe pointer-events-none">
+        <div className="bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border border-zinc-200 dark:border-white/10 p-2 md:p-3 rounded-3xl flex gap-2 md:gap-4 pointer-events-auto shadow-2xl transition-colors">
           {apps.map(app => (
             <button
               key={app.id}
               onClick={() => setActiveApp(app.id)}
               className={clsx(
-                "w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-300 hover:scale-110 hover:-translate-y-2",
+                "w-12 h-12 md:w-14 md:h-14 rounded-2xl flex items-center justify-center transition-all duration-300 hover:scale-110 hover:-translate-y-2",
                 activeApp === app.id ? "bg-zinc-200 dark:bg-white/20 shadow-inner" : "bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10"
               )}
             >
-              <app.icon className={app.color} size={28} />
+              <app.icon className={app.color} size={24} />
             </button>
           ))}
         </div>
@@ -354,7 +391,7 @@ export default function DesktopView() {
           setCurrentEvent(null);
           nextDay();
         }}
-        className="absolute bottom-8 right-8 z-30 w-16 h-16 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full flex items-center justify-center shadow-[0_0_30px_rgba(79,70,229,0.3)] dark:shadow-[0_0_30px_rgba(79,70,229,0.5)] hover:shadow-[0_0_40px_rgba(79,70,229,0.5)] transition-all duration-300 hover:scale-110 active:scale-95 group"
+        className="absolute bottom-20 md:bottom-8 right-4 md:right-8 z-30 w-14 h-14 md:w-16 md:h-16 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full flex items-center justify-center shadow-[0_0_30px_rgba(79,70,229,0.3)] dark:shadow-[0_0_30px_rgba(79,70,229,0.5)] hover:shadow-[0_0_40px_rgba(79,70,229,0.5)] transition-all duration-300 hover:scale-110 active:scale-95 group"
       >
         <Power size={24} className="group-hover:rotate-180 transition-transform duration-500" />
       </button>

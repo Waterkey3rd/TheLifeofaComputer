@@ -27,7 +27,9 @@ class HiddenFlags(BaseModel):
     machine_flags: List[str] = []
     history_tags: List[str] = []
     joined_npa: bool = False
-    pending_repairs: List[Dict[str, Any]] = []
+    pending_repairs: List[Any] = []
+    read_articles: List[str] = []
+    is_endless_mode: bool = False
 
 class PlayerState(BaseModel):
     model_config = ConfigDict(extra='ignore')
@@ -36,5 +38,5 @@ class PlayerState(BaseModel):
     day: int = 1
     health_status: HealthStatus = HealthStatus()
     attributes: PlayerAttributes = PlayerAttributes()
-    inventory: List[Dict[str, Any]] = []
+    inventory: List[Any] = []
     hidden_flags: HiddenFlags = HiddenFlags()

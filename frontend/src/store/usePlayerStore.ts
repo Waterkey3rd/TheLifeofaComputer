@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 
 export interface ComputerModel {
   model_id: string;
@@ -49,6 +50,7 @@ export interface PlayerState {
     joined_npa: boolean;
     pending_repairs: any[];
     read_articles: string[];
+    is_endless_mode?: boolean;
   };
   computer: ComputerModel | null;
 }
@@ -64,10 +66,24 @@ interface PlayerStore extends PlayerState {
   addPendingRepair: (repair: any) => void;
   joinNPA: () => void;
   markArticleRead: (id: string, gain: number) => void;
+  resetGame: (isEndless?: boolean) => void;
 }
 
-export const usePlayerStore = create<PlayerStore>((set) => ({
-  uuid: crypto.randomUUID(),
+const generateUUID = () => {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+};
+
+export const usePlayerStore = create<PlayerStore>()(
+  persist(
+    (set) => ({
+      uuid: generateUUID(),
   day: 1,
   health_status: {
     hardware: 100,
@@ -202,4 +218,33 @@ export const usePlayerStore = create<PlayerStore>((set) => ({
       mental_state: Math.max(0, state.attributes.mental_state - 5)
     }
   })),
-}));
+
+  resetGame: (isEndless = false) => set({
+    uuid: generateUUID(),
+    day: 1,
+    health_status: {
+      hardware: 100,
+      hardware_details: { cpu: 100, disk: 100, ram: 100, screen: 100, fan: 100, shell: 100 },
+      system: 100,
+      storage: 100,
+      software: 100,
+    },
+    attributes: {
+      wealth: 1000,
+      cyber_sense: 0,
+      mental_state: 100,
+    },
+    inventory: [],
+    hidden_flags: {
+      net_assoc_trust: 0,
+      scam_counter: 0,
+      machine_flags: [],
+      history_tags: [],
+      joined_npa: false,
+      pending_repairs: [],
+      read_articles: [],
+      is_endless_mode: isEndless,
+    },
+    computer: null,
+  })
+}), { name: 'cyber-survival-save' }));

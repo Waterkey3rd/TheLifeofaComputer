@@ -282,7 +282,7 @@ export function WikiApp() {
       {hidden_flags.joined_npa && (
         <div className="space-y-3">
           {visibleArticles.map(a => {
-            const isRead = hidden_flags.read_articles.includes(a.id);
+            const isRead = (hidden_flags.read_articles || []).includes(a.id);
             return (
               <div key={a.id} className={clsx("p-4 border rounded-xl flex justify-between items-center transition-all", isRead ? "border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50 opacity-70" : "border-indigo-200 dark:border-indigo-800/50 bg-white dark:bg-zinc-800 shadow-sm cursor-pointer")} onClick={() => handleRead(a)}>
                 <div>

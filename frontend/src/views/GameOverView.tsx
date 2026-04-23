@@ -6,13 +6,6 @@ export default function GameOverView({ onRestart }: { onRestart: () => void }) {
   const isDead = Object.values(health_status).some(h => h <= 0);
 
   const handleRestart = () => {
-    // Reset state slightly or completely, for now complete reset except maybe uuid
-    setPlayerState({
-      day: 1,
-      health_status: { hardware: 100, system: 100, storage: 100, software: 100 },
-      attributes: { wealth: 1000, cyber_sense: 0, mental_state: 100 },
-      computer: null
-    });
     onRestart();
   };
 

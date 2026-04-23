@@ -9,7 +9,7 @@ export type ViewState = 'BOOTING' | 'SELECT_PC' | 'DESKTOP' | 'GAME_OVER';
 
 function App() {
   const [currentView, setCurrentView] = useState<ViewState>('BOOTING');
-  const { computer, health_status, day } = usePlayerStore();
+  const { computer, health_status, day, hidden_flags } = usePlayerStore();
 
   useEffect(() => {
     // Ensure dark mode by default
@@ -18,13 +18,13 @@ function App() {
 
   useEffect(() => {
     // Check game over conditions
-    const isDead = Object.values(health_status).some(h => h <= 0);
-    if (isDead || day > 7) { // Standard mode 7 days
+    const isDead = Object.values(health_status).some(h => h <= 0) || Object.values(health_status.hardware_details).some(h => h <= 0);
+    if (isDead || (!hidden_flags?.is_endless_mode && day > 7)) {
       if (currentView !== 'BOOTING' && currentView !== 'SELECT_PC') {
         setCurrentView('GAME_OVER');
       }
     }
-  }, [health_status, day, currentView]);
+  }, [health_status, day, hidden_flags?.is_endless_mode, currentView]);
 
   const renderView = () => {
     switch (currentView) {
@@ -33,7 +33,7 @@ function App() {
       case 'SELECT_PC':
         return <SelectPCView onSelect={() => setCurrentView('DESKTOP')} />;
       case 'DESKTOP':
-        return <DesktopView />;
+        return <DesktopView onShutdown={() => setCurrentView('SELECT_PC')} />;
       case 'GAME_OVER':
         return <GameOverView onRestart={() => setCurrentView('SELECT_PC')} />;
       default:

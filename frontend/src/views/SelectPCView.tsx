@@ -34,23 +34,63 @@ const availablePCs: ComputerModel[] = [
   }
 ];
 
+import { useState } from 'react';
+
 export default function SelectPCView({ onSelect }: { onSelect: () => void }) {
-  const setComputer = usePlayerStore(state => state.setComputer);
+  const { computer, day, setComputer, resetGame, setPlayerState, hidden_flags } = usePlayerStore();
+  const [isEndless, setIsEndless] = useState(hidden_flags?.is_endless_mode || false);
 
   const handleSelect = (pc: ComputerModel) => {
+    resetGame(isEndless);
     setComputer(pc);
     onSelect();
   };
 
+  const handleContinue = () => {
+    setPlayerState({ hidden_flags: { ...hidden_flags, is_endless_mode: isEndless } });
+    onSelect();
+  };
+
   return (
-    <div className="w-full h-full bg-zinc-950 flex flex-col items-center justify-center p-6 text-zinc-100 relative">
+    <div className="w-full h-full bg-zinc-950 flex flex-col items-center justify-center p-6 text-zinc-100 relative overflow-y-auto">
       <div className="absolute inset-0 bg-gradient-to-br from-indigo-900/20 to-zinc-950 z-0"></div>
       
-      <div className="z-10 w-full max-w-4xl">
+      <div className="z-10 w-full max-w-4xl py-12">
+        {computer && (
+          <div className="mb-12 bg-zinc-900/80 border border-indigo-500/30 p-6 rounded-2xl flex flex-col md:flex-row items-center justify-between backdrop-blur-md">
+            <div>
+              <h2 className="text-2xl font-bold text-white mb-2">检测到休眠中的系统</h2>
+              <p className="text-zinc-400">设备: {computer.display_name} | 当前存活: 第 {day} 天</p>
+            </div>
+            <div className="mt-6 md:mt-0 flex items-center gap-4">
+              <button
+                onClick={handleContinue}
+                className="bg-indigo-600 hover:bg-indigo-500 px-6 py-3 rounded-xl font-bold transition-all hover:scale-105"
+              >
+                唤醒并继续
+              </button>
+            </div>
+          </div>
+        )}
+
         <h1 className="text-4xl font-bold mb-2 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400 text-center">
-          选择你的初始装备
+          {computer ? "或者，覆盖存档以重新开始" : "选择你的初始装备"}
         </h1>
-        <p className="text-zinc-400 text-center mb-10">你的电脑配置将决定你在赛博校园的生存难度</p>
+        <p className="text-zinc-400 text-center mb-6">你的电脑配置将决定你在赛博校园的生存难度</p>
+        
+        <div className="flex justify-center items-center mb-10 gap-3">
+          <button
+            onClick={() => setIsEndless(!isEndless)}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+              isEndless ? 'bg-indigo-500' : 'bg-zinc-700'
+            }`}
+          >
+            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+              isEndless ? 'translate-x-6' : 'translate-x-1'
+            }`} />
+          </button>
+          <span className="text-zinc-300 font-medium">无尽模式 (取消 7 天生存限制)</span>
+        </div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {availablePCs.map((pc) => (
