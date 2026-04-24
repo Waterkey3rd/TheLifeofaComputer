@@ -42,7 +42,7 @@ export default function DesktopView({ onShutdown }: { onShutdown?: () => void })
     setTimeoutRemaining(null);
     try {
       const state = usePlayerStore.getState();
-      const baseUrl = import.meta.env.VITE_API_URL || "";
+      const baseUrl = (import.meta.env.VITE_API_URL || "").replace(/\/+$/, '');
       const res = await fetch(`${baseUrl}/api/event/next`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -96,7 +96,7 @@ export default function DesktopView({ onShutdown }: { onShutdown?: () => void })
     setTimeoutRemaining(null);
     try {
       const state = usePlayerStore.getState();
-      const baseUrl = import.meta.env.VITE_API_URL || "";
+      const baseUrl = (import.meta.env.VITE_API_URL || "").replace(/\/+$/, '');
       const res = await fetch(`${baseUrl}/api/action/resolve`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

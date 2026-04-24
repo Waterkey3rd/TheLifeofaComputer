@@ -1,16 +1,11 @@
 import requests
-state = {
-    "uuid": "123",
-    "day": 1,
-    "health_status": {"hardware": 100, "system": 100, "storage": 100, "software": 100},
-    "attributes": {"wealth": 1000, "cyber_sense": 0, "mental_state": 100},
-    "inventory": [],
-    "hidden_flags": {"net_assoc_trust": 0, "scam_counter": 0, "machine_flags": [], "history_tags": []}
-}
 
-req = requests.post('http://127.0.0.1:8000/api/event/next', json={'state': state, 'event_type': 'routine'})
-data = req.json()
-print("Event fetched:", req.status_code)
+res = requests.post("http://localhost:8000/api/event/next", json={"state": {"day": 1, "attributes": {"mental_state": 100, "wealth": 100, "cyber_sense": 10}, "health_status": {"hardware": 100, "system": 100, "storage": 100, "software": 100, "hardware_details": {"cpu": 100, "ram": 100, "disk": 100, "screen": 100, "fan": 100, "shell": 100}}, "hidden_flags": {"history_tags": []}}, "event_type": "routine"})
+print(res.status_code)
+print(res.text)
 
-res = requests.post('http://127.0.0.1:8000/api/action/resolve', json={'state': data['state'], 'event': data['event'], 'option_id': data['event']['options'][0]['option_id']})
-print("Action resolved:", res.status_code, res.text)
+res2 = requests.post("http://localhost:8000/api/event/next/")
+print("with slash:", res2.status_code)
+
+res3 = requests.post("http://localhost:8000//api/event/next")
+print("double slash:", res3.status_code)

@@ -25,10 +25,11 @@ if os.path.exists(dist_path):
     if os.path.exists(os.path.join(dist_path, "pcs")):
         app.mount("/pcs", StaticFiles(directory=os.path.join(dist_path, "pcs")), name="pcs")
         
-    @app.get("/{full_path:path}")
+    @app.api_route("/{full_path:path}", methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"])
     async def serve_spa(full_path: str):
-        if full_path.startswith("api/"):
-            return {"status": "error", "message": "API endpoint not found"}
+        # Prevent API routes from falling through to the SPA index.html and returning 200/405
+        if full_path.startswith("api/") or full_path == "api":
+            return {"status": "error", "message": f"API endpoint not found: {full_path}"}
         
         file_path = os.path.join(dist_path, full_path)
         if os.path.isfile(file_path):
