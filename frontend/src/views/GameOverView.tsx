@@ -2,8 +2,8 @@ import { usePlayerStore } from '../store/usePlayerStore';
 import { RefreshCw } from 'lucide-react';
 
 export default function GameOverView({ onRestart }: { onRestart: () => void }) {
-  const { health_status, setPlayerState } = usePlayerStore();
-  const isDead = Object.values(health_status).some(h => h <= 0);
+  const { health_status } = usePlayerStore();
+  const isDead = Object.values(health_status).some(h => typeof h === 'number' && h <= 0) || Object.values(health_status.hardware_details).some(h => h <= 0);
 
   const handleRestart = () => {
     onRestart();

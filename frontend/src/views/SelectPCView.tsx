@@ -1,5 +1,4 @@
 import { usePlayerStore, type ComputerModel } from '../store/usePlayerStore';
-import { Laptop } from 'lucide-react';
 
 const availablePCs: ComputerModel[] = [
   {

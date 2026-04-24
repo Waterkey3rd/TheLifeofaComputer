@@ -1,5 +1,5 @@
 import { usePlayerStore } from '../store/usePlayerStore';
-import { ShoppingBag, Wrench, Book, Backpack, Wallet, Cpu, Activity, ShieldCheck, QrCode, MessageCircle } from 'lucide-react';
+import { ShoppingBag, Wrench, Backpack, QrCode, MessageCircle } from 'lucide-react';
 import clsx from 'clsx';
 import { useState } from 'react';
 

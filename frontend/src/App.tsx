@@ -18,7 +18,7 @@ function App() {
 
   useEffect(() => {
     // Check game over conditions
-    const isDead = Object.values(health_status).some(h => h <= 0) || Object.values(health_status.hardware_details).some(h => h <= 0);
+    const isDead = Object.values(health_status).some(h => typeof h === 'number' && h <= 0) || Object.values(health_status.hardware_details).some(h => h <= 0);
     const standardDays = import.meta.env.VITE_STANDARD_MODE_DAYS ? parseInt(import.meta.env.VITE_STANDARD_MODE_DAYS) : 7;
     if (isDead || (!hidden_flags?.is_endless_mode && day > standardDays)) {
       if (currentView !== 'BOOTING' && currentView !== 'SELECT_PC') {
