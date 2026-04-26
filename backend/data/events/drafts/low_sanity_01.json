@@ -1,0 +1,58 @@
+{
+  "event_id": "low_sanity_01",
+  "event_type": "routine",
+  "tags": [
+    "技术分享",
+    "校园活动"
+  ],
+  "is_unique": false,
+  "weight": 100,
+  "prerequisites": {
+    "required_mental_state": "<=30"
+  },
+  "title": "网协技术分享会",
+  "description": "你最近与电脑的互动不是很愉快，正好校网协举办了一场技术分享会，主题是“网络安全基础知识”。你犹豫了一下，决定去听听看。分享会上，学长们讲解了常见的网络安全威胁和防护措施，还分享了一些实用的安全工具和资源。",
+  "technical_context": "网络安全是保护个人信息和数据的重要手段。使用强密码、定期更改密码、不要随便点击不明链接，这些都是防止网络诈骗的有效措施。",
+  "options": [
+    {
+      "option_id": "opt_1",
+      "text": "参加分享会，认真学习。",
+      "required_cyber_sense": 0,
+      "outcomes": [
+        {
+          "probability": 1.0,
+          "result_text": "你认真听取了学长们的分享，学到了很多实用的网络安全知识。你的网络安全意识提升了！",
+          "stat_changes": {
+            "health_hardware": 0,
+            "health_system": 0,
+            "health_storage": 0,
+            "health_software": 0,
+            "mental_state": 50,
+            "wealth": 0,
+            "cyber_sense": 10
+          }
+        }
+      ]
+    },
+    {
+      "option_id": "opt_2",
+      "text": "无视分享会，继续打游戏。",
+      "required_cyber_sense": 0,
+      "outcomes": [
+        {
+          "probability": 1.0,
+          "result_text": "你选择继续打游戏，但是从中收获了快乐和放松。虽然没有提升网络安全意识，但也算是给自己充电了。",
+          "stat_changes": {
+            "health_hardware": 0,
+            "health_system": 0,
+            "health_storage": 0,
+            "health_software": 0,
+            "mental_state": 30,
+            "wealth": 0,
+            "cyber_sense": 0
+          }
+        }
+      ]
+    }
+  ]
+}
