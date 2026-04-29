@@ -32,7 +32,7 @@
         },
         {
           "probability": 0.4,
-          "result_text": "你刚把U盘插上电脑，系统就提示「此驱动器存在问题」。你试着格式化，结果U盘彻底变砖，还差点把USB口烧了。",
+          "result_text": "你刚把U盘插上电脑，系统就提示「此驱动器存在问题」。你试着格式化，结果U盘彻底变砖。",
           "stat_changes": {
             "health_hardware": -10,
             "mental_state": -15,

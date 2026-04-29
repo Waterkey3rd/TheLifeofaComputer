@@ -31,7 +31,7 @@
         },
         {
           "probability": 0.5,
-          "result_text": "你做的启动U盘怎么也引导不了，查了半天发现是镜像写错了。折腾三小时，心态崩了。",
+          "result_text": "你做的启动U盘怎么也引导不了，查了半天发现是BIOS中安全启动没有关闭。折腾三小时，心态崩了。",
           "stat_changes": {
             "mental_state": -20,
             "health_system": -10,

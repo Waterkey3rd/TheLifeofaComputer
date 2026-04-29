@@ -22,7 +22,7 @@
       "outcomes": [
         {
           "probability": 1.0,
-          "result_text": "没过几天系统弹出「磁盘空间不足」，电脑卡成PPT，连微信都打不开。你不得不花一晚上清理C盘。",
+          "result_text": "没过几天C盘红得发紫，电脑卡成PPT，连微信都打不开。你不得不花一晚上清理C盘。",
           "stat_changes": {
             "health_storage": -25,
             "health_system": -15,
