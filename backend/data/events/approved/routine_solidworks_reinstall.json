@@ -13,7 +13,7 @@
   },
   "title": "Solidworks的版本噩梦",
   "description": "你发现Solidworks装错了版本，和课程要求对不上，必须卸载重装。你看着「卸载程序」陷入了沉思……",
-  "technical_context": "Solidworks卸载非常容易残留注册表、服务和许可文件，导致重装失败。手动清理需要用到Windows Installer CleanUp、删除注册表项等高级操作。建议使用官方卸载工具或找有经验的人帮忙，否则可能折腾一整天还装不上。",
+  "technical_context": "Solidworks卸载非常容易残留注册表、服务和许可文件，导致重装失败。手动清理需要手动删除残留文件、删除注册表项等高级操作。建议使用官方卸载工具或找有经验的人帮忙，否则可能折腾一整天还装不上。",
   "options": [
     {
       "option_id": "opt_diy",
